@@ -1,0 +1,179 @@
+<!--DOCTYPE html5-->
+
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+	html { overflow: hidden }
+</style> 
+
+<title>Puzzle Defenders</title>
+
+
+</head><body bgcolor="#000000" >
+
+<!-- Create the progress bar -->
+<progress id="progressBar" max="76" style="margin: 0 auto; 
+			position:absolute; top: 50%; left: 40%; z-index: 1; width:320px; height:25px"></progress>
+
+<div id="fb-root"></div>
+
+<!-- Create the canvas -->
+<canvas id="canvas" margin="auto" width="480" height="320" style="position:fixed; z-index: 0">
+</canvas>
+
+<!-- Include the font files from Google -->
+<link href='http://fonts.googleapis.com/css?family=Macondo+Swash+Caps|Henny+Penny|Sunshiney|Mystery+Quest' rel='stylesheet' type='text/css'>
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<!--Act as include libraries-->
+<script type="text/javascript" src="libraries/sprite/Sprite.js"> </script>
+<script type="text/javascript" src="libraries/sprite/SpriteManager.js"> </script>
+<script type="text/javascript" src="libraries/Utilities.js"> </script>
+<script type="text/javascript" src="libraries/audio/SoundJS.js"> </script>
+<script type="text/javascript" src="libraries/PredefinedSpawn.js"> </script>
+<!--<script type="text/javascript" src="libraries/controlActive.js"> </script>
+<script type="text/javascript" src="libraries/instructionSequence.js"> </script>
+<script type="text/javascript" src="libraries/resetSystem.js"> </script>-->
+<script type="text/javascript" src="libraries/tutorialData.js"> </script>
+<script type="text/javascript" src="src/Goal.js"> </script>
+<script type="text/javascript" src="src/tutorialHandler.js"> </script>
+<script type="text/javascript" src="libraries/VariableContainer.js"> </script>
+<script type="text/javascript" src="src/InputHandler.js"> </script> 
+<script type="text/javascript" src="src/ServerCommunicator.js"> </script> 
+<script type="text/javascript" src="src/Menu.js"> </script>
+<script type="text/javascript" src="src/MenuNavigator.js"> </script> 
+<script type="text/javascript" src="src/Timer.js"> </script>
+<script type="text/javascript" src="src/WorldNode.js"> </script>
+<script type="text/javascript" src="src/OverWorld.js"> </script>
+<script type="text/javascript" src="src/Orb.js"> </script>
+<script type="text/javascript" src="src/SpellOrb.js"> </script>
+<script type="text/javascript" src="src/Board.js"> </script>
+<script type="text/javascript" src="src/Fairy.js"> </script>
+<script type="text/javascript" src="src/Spell.js"> </script>
+<script type="text/javascript" src="src/Race.js"> </script>
+<script type="text/javascript" src="src/Witch.js"> </script>
+<script type="text/javascript" src="src/Steampunk.js"> </script>
+<script type="text/javascript" src="src/Angel.js"> </script>
+<script type="text/javascript" src="src/Resource.js"> </script>
+<script type="text/javascript" src="src/AIUpdateChecker.js"> </script>
+<script type="text/javascript" src="src/AIUtility.js"> </script>
+<script type="text/javascript" src="src/AIHandler.js"> </script>
+<script type="text/javascript" src="src/Character.js"> </script>
+<script type="text/javascript" src="src/BoardDirector.js"> </script>
+<script type="text/javascript" src="src/GameContainer.js"> </script>
+<script type="text/javascript" src="src/Button.js"> </script>
+<script type="text/javascript" src="src/SequenceButton.js"> </script>
+<script type="text/javascript" src="src/TextBox.js"> </script>
+
+
+<!-- The following is for networking.-->
+<!-- <script type="text/javascript" src="http://puzzledefenders.herokuapp.com/socket.io/socket.io.js"></script> -->
+<script type="text/javascript" src="socket.io/socket.io.js"></script>
+
+<!-- Start of game logic -->
+<script type="text/javascript">
+	window.onload = init;
+	window.onresize = resize;
+	var menuNav;
+	var intervalID;
+	
+	// Create the loading bar
+	progressBar = document.getElementById("progressBar");
+	progressBar.title = "Loading images...";
+
+	// Load the SDK Asynchronously for Facebook login
+	(function() {
+		var e = document.createElement('script'); e.async = true;
+		e.src = document.location.protocol +
+		  '//connect.facebook.net/en_US/all.js';
+		document.getElementById('fb-root').appendChild(e);
+	}());
+
+	// Init the SDK upon load
+	window.fbAsyncInit = function() {
+		FB.init({
+			appId      : '106047009534554', // App ID
+			status     : true, // check login status
+			cookie     : true, // enable cookies to allow the server to access the session
+			xfbml      : true, // parse XFBML
+			oauth	   : true  // enable OAuth 2.0 authentication
+		});
+	};
+	
+	// Resizes the canvas based on the current page size
+	function resize(nan, cols, rows) {
+		if (cols == null)
+			cols = variableContainer.gameContainerNumColumns;
+		if (rows == null)
+			rows = variableContainer.gameContainerNumRows;
+		
+		variableContainer.cellDimensions.setFirst((window.innerWidth * .95) / cols);
+		if (variableContainer.cellDimensions.getFirst() < variableContainer.minCellDimension) {
+			variableContainer.cellDimensions.setFirst(variableContainer.minCellDimension);
+		} else if (variableContainer.cellDimensions.getFirst() > variableContainer.maxCellDimension) {
+			variableContainer.cellDimensions.setFirst(variableContainer.maxCellDimension);
+		}
+		variableContainer.cellDimensions.setSecond(variableContainer.cellDimensions.getFirst());
+		// Reset the size of the game based on the current page size
+		canvas.width = cols * variableContainer.cellDimensions.getFirst();
+		canvas.height = rows * variableContainer.cellDimensions.getSecond();
+		
+		// Determine new sizes for the canvas
+		var viewportWidth = window.innerWidth;
+		var viewportHeight = window.innerHeight;
+		var canvasWidth = cols * variableContainer.cellDimensions.getFirst();
+		var canvasHeight = rows * variableContainer.cellDimensions.getSecond();
+
+		// Now resize the actual canvas
+		canvas.setAttribute("width", canvasWidth);
+		canvas.setAttribute("height", canvasHeight);
+		canvas.style.top = (viewportHeight - canvasHeight) / 2;
+		canvas.style.left = (viewportWidth - canvasWidth) / 2;
+	}
+	
+	// Called when the page is loaded
+	function init() {
+		// Immediately resize the canvas
+		resize();
+		
+		// This line disables the up/down arrow keys from causing the scroll bar to go up/down
+		document.onkeydown=function(){return event.keyCode!=38 && event.keyCode!=40 
+			&& event.keyCode != variableContainer.SPACE && event.keyCode != variableContainer.ENTER};
+		
+		canvas = document.getElementById('canvas'); //because var is omitted within a function, canvas is global
+		context2D = canvas.getContext('2d'); //context2D is also global
+		
+		//Initialize Menus
+		initializeMenuSprites();
+		
+		// Initialize the SpriteManager array
+		initializeGameplaySprites();
+		
+		//kill the old interval
+		clearInterval(intervalID);
+		// Create a listener for the progress bar
+		intervalID = setInterval(progressListener, variableContainer.tickInterval);
+	}
+	
+	// Check for progressBar's completion
+	// Once it is completed, create a new MenuNavigator
+	function progressListener() {
+		if(progressBar.hidden) {
+			//kill the old interval
+			clearInterval(intervalID);
+			intervalID = setInterval(update, variableContainer.tickInterval)
+			menuNav = new MenuNavigator(intervalID);
+		}
+	}
+	
+	// Update menu navigator, which updates everything contained in it
+	function update() {
+		menuNav.update();
+		draw();
+	}
+	
+	// Draw menu navigator, which draws everything contained in it
+	function draw() {
+		menuNav.draw();
+	}
+	
+</script>
+</body></html>
