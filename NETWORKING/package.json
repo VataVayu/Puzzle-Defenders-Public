@@ -6,6 +6,6 @@
 	"express": "2.5.8",
 	"formidable": "1.0.9",
 	"connect": "1.8.5",
-    "mongodb": "1.1.11"
+    "mongodb": "3.6.1"
   }
 }
